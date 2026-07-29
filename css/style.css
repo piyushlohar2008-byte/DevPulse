@@ -3778,3 +3778,13 @@ html, body {
     background: var(--primary-hover, #1d4ed8) !important;
     box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
 }
+/* Spinner Animation for Social Login Buttons */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.spin {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+}

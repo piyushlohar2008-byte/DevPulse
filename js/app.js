@@ -1070,3 +1070,77 @@ if (floatingSettingsBtn) {
         window.openSettingsModal();
     };
 }
+/* ==========================================
+   GOOGLE & GITHUB SOCIAL LOGIN LOGIC
+========================================== */
+document.addEventListener("DOMContentLoaded", () => {
+    const googleBtn = document.querySelector(".google-btn");
+    const githubBtn = document.querySelector(".github-btn");
+    const authOverlay = document.getElementById("authOverlay");
+
+    // १. GOOGLE LOGIN HANDLER
+    if (googleBtn) {
+        googleBtn.addEventListener("click", function (e) {
+            e.preventDefault();
+
+            // Loading state दाखवणे
+            const originalContent = this.innerHTML;
+            this.innerHTML = `<i class="bi bi-arrow-repeat spin"></i> Connecting Google...`;
+            this.style.pointerEvents = "none";
+            this.style.opacity = "0.8";
+
+            // 1.5 सेकंदांनंतर Login Success करणे
+            setTimeout(() => {
+                // UI मूळ स्थितीत आणणे
+                this.innerHTML = originalContent;
+                this.style.pointerEvents = "auto";
+                this.style.opacity = "1";
+
+                // Form Modal घालवणे
+                if (authOverlay) {
+                    authOverlay.classList.remove("active");
+                }
+
+                // Feedback Message दाखवणे
+                if (typeof showToast === "function") {
+                    showToast("Logged in successfully with Google! 🌐");
+                } else {
+                    alert("Logged in successfully with Google! 🌐");
+                }
+            }, 1500);
+        });
+    }
+
+    // २. GITHUB LOGIN HANDLER
+    if (githubBtn) {
+        githubBtn.addEventListener("click", function (e) {
+            e.preventDefault();
+
+            // Loading state दाखवणे
+            const originalContent = this.innerHTML;
+            this.innerHTML = `<i class="bi bi-arrow-repeat spin"></i> Connecting GitHub...`;
+            this.style.pointerEvents = "none";
+            this.style.opacity = "0.8";
+
+            // 1.5 सेकंदांनंतर Login Success करणे
+            setTimeout(() => {
+                // UI मूळ स्थितीत आणणे
+                this.innerHTML = originalContent;
+                this.style.pointerEvents = "auto";
+                this.style.opacity = "1";
+
+                // Form Modal घालवणे
+                if (authOverlay) {
+                    authOverlay.classList.remove("active");
+                }
+
+                // Feedback Message दाखवणे
+                if (typeof showToast === "function") {
+                    showToast("Logged in successfully with GitHub! 🐙");
+                } else {
+                    alert("Logged in successfully with GitHub! 🐙");
+                }
+            }, 1500);
+        });
+    }
+});
