@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Vision - Client-Side AI Image Classifier</title>
+    
+    <!-- TensorFlow.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+    <!-- MobileNet Pre-trained Model -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.min.js"></script>
+    
+    <!-- Bootstrap 5 CSS & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-dark: #090d16;
+            --bg-card: #111827;
+            --border-color: #1f293d;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-cyan: #00f0ff;
+            --accent-purple: #a855f7;
+            --accent-green: #22c55e;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container-custom {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+
+        header h1 {
+            font-size: 26px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-top: 6px;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-family: 'Fira Code', monospace;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            margin-top: 12px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+        }
+
+        .status-badge.ready .status-dot { background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+        .status-badge.loading .status-dot { background: var(--accent-cyan); animation: pulse 1s infinite; }
+
+        @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+        /* Workspace Grid */
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .workspace { grid-template-columns: 1fr; }
+        }
+
+        .card-custom {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .card-title-custom {
+            font-size: 15px;
+            font-family: 'Fira Code', monospace;
+            color: var(--accent-cyan);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Canvas & Preview Box */
+        .preview-box {
+            width: 100%;
+            height: 250px;
+            background: #050811;
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+
+        .placeholder-text {
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .placeholder-text i {
+            font-size: 36px;
+            color: var(--accent-cyan);
+            margin-bottom: 8px;
+        }
+
+        /* Inputs & Buttons */
+        .form-control-dark {
+            background-color: #050811;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            font-size: 13px;
+        }
+
+        .form-control-dark:focus {
+            background-color: #050811;
+            border-color: var(--accent-cyan);
+            color: var(--text-main);
+            box-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
+        }
+
+        .btn-cyan {
+            background-color: var(--accent-cyan);
+            color: #000;
+            font-weight: 600;
+            border: none;
+        }
+
+        .btn-cyan:hover:not(:disabled) {
+            background-color: #33f3ff;
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+            color: #000;
+        }
+
+        /* Results Display */
+        .results-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .result-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            font-family: 'Fira Code', monospace;
+        }
+
+        .progress-bar-bg {
+            height: 6px;
+            background: #050811;
+            border-radius: 3px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-custom">
+    <header>
+        <h1><i class="bi bi-cpu text-info"></i> NEURAL VISION AI</h1>
+        <p>In-Browser Zero-Latency Image Classifier Powered by TensorFlow.js & MobileNet</p>
+        
+        <div class="status-badge loading" id="statusBadge">
+            <span class="status-dot"></span>
+            <span id="statusText">Initializing Neural Engine...</span>
+        </div>
+    </header>
+
+    <div class="workspace">
+        <!-- Canvas Preview & Upload Card -->
+        <div class="card-custom">
+            <div class="card-title-custom"><i class="bi bi-image"></i> IMAGE CANVAS INPUT</div>
+
+            <div class="preview-box">
+                <div class="placeholder-text" id="placeholder">
+                    <i class="bi bi-cloud-arrow-up d-block"></i>
+                    <span>No image selected yet</span>
+                </div>
+                <canvas id="mainCanvas"></canvas>
+            </div>
+
+            <div class="mt-2">
+                <label for="imageUpload" class="form-label text-muted small mb-1">Select Image File</label>
+                <input class="form-control form-control-dark" type="file" id="imageUpload" accept="image/*">
+            </div>
+
+            <button class="btn btn-cyan w-100 mt-2" id="btnClassify" disabled>
+                <i class="bi bi-magic me-1"></i> Classify Image
+            </button>
+        </div>
+
+        <!-- AI Output & Predictions -->
+        <div class="card-custom">
+            <div class="card-title-custom"><i class="bi bi-bar-chart-line"></i> AI PREDICTION MATRIX</div>
+
+            <div id="resultsContainer" class="results-list">
+                <p style="color: var(--text-muted); font-size: 13px; font-style: italic;">
+                    Select an image above and click "Classify Image" to view predictions.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        let model = null;
+        let isImageLoaded = false;
+
+        const imageUpload = document.getElementById('imageUpload');
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        const placeholder = document.getElementById('placeholder');
+        const btnClassify = document.getElementById('btnClassify');
+        const statusBadge = document.getElementById('statusBadge');
+        const statusText = document.getElementById('statusText');
+        const resultsContainer = document.getElementById('resultsContainer');
+
+        // 1. TensorFlow MobileNet Model Load
+        try {
+            statusText.textContent = "Loading TensorFlow MobileNet Model...";
+            model = await mobilenet.load();
+            
+            statusBadge.className = "status-badge ready";
+            statusText.textContent = "AI Model Engine Ready";
+        } catch (err) {
+            statusBadge.className = "status-badge";
+            statusText.textContent = "Failed to load MobileNet model";
+            console.error(err);
+        }
+
+        // 2. Image Load onto Canvas
+        imageUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    // Set Canvas Size
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    
+                    // Clear & Draw
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+
+                    canvas.style.display = 'block';
+                    placeholder.style.display = 'none';
+                    isImageLoaded = true;
+
+                    if (model) {
+                        btnClassify.disabled = false;
+                    }
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // 3. Robust TensorFlow Tensor Classification
+        btnClassify.addEventListener('click', async () => {
+            if (!model || !isImageLoaded) return;
+
+            btnClassify.disabled = true;
+            statusText.textContent = "Executing Neural Network Inference...";
+            statusBadge.className = "status-badge loading";
+
+            // Small delay for UI smoothness
+            setTimeout(async () => {
+                try {
+                    const startTime = performance.now();
+                    
+                    // Convert Canvas pixels directly into TensorFlow Tensor (Bypasses CORS/file restrictions)
+                    const tfImg = tf.browser.fromPixels(canvas);
+                    const predictions = await model.classify(tfImg);
+                    tfImg.dispose(); // Free GPU Memory
+
+                    const endTime = performance.now();
+                    const latency = (endTime - startTime).toFixed(1);
+
+                    statusBadge.className = "status-badge ready";
+                    statusText.textContent = `Inference Completed in ${latency}ms`;
+
+                    // Render Results
+                    resultsContainer.innerHTML = predictions.map(p => {
+                        const probability = (p.probability * 100).toFixed(1);
+                        return `
+                            <div class="result-item">
+                                <div class="result-header">
+                                    <span>${p.className.split(',')[0]}</span>
+                                    <span>${probability}%</span>
+                                </div>
+                                <div class="progress-bar-bg">
+                                    <div class="progress-bar-fill" style="width: ${probability}%"></div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                } catch (err) {
+                    console.error("Classification Error:", err);
+                    alert("Classification failed. Please try another image.");
+                } finally {
+                    btnClassify.disabled = false;
+                }
+            }, 50);
+        });
+    });
+</script>
+
+</body>
+</html>
